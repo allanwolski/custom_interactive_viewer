@@ -284,10 +284,16 @@ class GestureHandler {
     final Offset localFocal = box.globalToLocal(_doubleTapPosition!);
 
     final double currentScale = controller.state.scale;
-    final double targetScale =
-        (currentScale < doubleTapZoomFactor) ? doubleTapZoomFactor : 1.0;
 
-    final double factor = calculateZoomFactor(currentScale, targetScale);
+    // Zoom IN se estiver abaixo do limite
+    final bool zoomingIn = currentScale < doubleTapZoomFactor;
+
+    // Define o fator de zoom RELATIVO (ex: 0.5 = +50%, -0.5 = -50%)
+    final double factor =
+        zoomingIn
+            ? doubleTapZoomFactor -
+                1.0 // Ex: zoom de 1.0 para 2.0 → fator = 1.0
+            : -(currentScale - 1.0); // Ex: zoom de 2.0 para 1.0 → fator = -1.0
 
     await controller.zoom(
       factor: factor,
@@ -295,16 +301,8 @@ class GestureHandler {
       animate: true,
     );
 
-    _doubleTapPosition = null; // Reset after handling
+    _doubleTapPosition = null;
     _applyConstraints();
-  }
-
-  double calculateZoomFactor(double currentScale, double targetScale) {
-    if (targetScale >= currentScale) {
-      return (targetScale / currentScale) - 1.0;
-    } else {
-      return -((currentScale / targetScale) - 1.0);
-    }
   }
 
   /// Handles pointer scroll events
