@@ -48,8 +48,10 @@ class CustomInteractiveViewerController extends ChangeNotifier {
     double initialScale = 1.0,
     Offset initialOffset = Offset.zero,
     double initialRotation = 0.0,
+    Size? contentSize,
     this.onEvent,
   }) : _vsync = vsync,
+       _contentSize = contentSize,
        _state = TransformationState(
          scale: initialScale,
          offset: initialOffset,
@@ -249,14 +251,38 @@ class CustomInteractiveViewerController extends ChangeNotifier {
 
   /// Fit the content to the screen size
   Future<void> fitToScreen({
+    Size? contentSize,
+    Size? viewportSize,
     double padding = 20.0,
     bool animate = true,
     Duration duration = const Duration(milliseconds: 300),
     Curve curve = Curves.easeInOut,
   }) async {
+    // Get viewport size from parameter or registered getter
+    final Size? finalViewportSize = viewportSize ?? this.viewportSize;
+    if (finalViewportSize == null) {
+      assert(
+        false,
+        'Cannot center content because viewport size is unknown. '
+        'Provide a viewportSize parameter or set the viewportSizeGetter.',
+      );
+      return;
+    }
+
+    // Get content size from parameter or registered getter
+    final Size? finalContentSize = contentSize ?? this.contentSize;
+    if (finalContentSize == null) {
+      assert(
+        false,
+        'Cannot center content because content size is unknown. '
+        'Provide a contentSize parameter or set the contentSizeGetter.',
+      );
+      return;
+    }
+
     final targetState = TransformationState.fitContent(
-      contentSize,
-      viewportSize,
+      finalContentSize,
+      finalViewportSize,
       padding: padding,
     );
 
@@ -394,7 +420,7 @@ class CustomInteractiveViewerController extends ChangeNotifier {
     Curve curve = Curves.easeInOut,
   }) async {
     // Get viewport size from parameter or registered getter
-    final Size? finalViewportSize = viewportSize ?? _getViewportSize?.call();
+    final Size? finalViewportSize = viewportSize ?? this.viewportSize;
     if (finalViewportSize == null) {
       assert(
         false,
@@ -405,7 +431,7 @@ class CustomInteractiveViewerController extends ChangeNotifier {
     }
 
     // Get content size from parameter or registered getter
-    final Size? finalContentSize = contentSize ?? _getContentSize?.call();
+    final Size? finalContentSize = contentSize ?? contentSize;
     if (finalContentSize == null) {
       assert(
         false,
@@ -448,7 +474,7 @@ class CustomInteractiveViewerController extends ChangeNotifier {
     Curve curve = Curves.easeInOut,
   }) async {
     // Get viewport size from parameter or registered getter
-    final Size? finalViewportSize = viewportSize ?? _getViewportSize?.call();
+    final Size? finalViewportSize = viewportSize ?? viewportSize;
     if (finalViewportSize == null) {
       assert(
         false,
@@ -548,24 +574,22 @@ class CustomInteractiveViewerController extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Function type for getting the viewport size
-  Size? Function()? _getViewportSize;
+  /// Viewport size
+  Size? _viewportSize;
 
-  /// Function type for getting the content size
-  Size? Function()? _getContentSize;
+  Size? get viewportSize => _viewportSize ?? Size.zero;
 
-  Size get viewportSize => _getViewportSize?.call() ?? Size.zero;
-
-  Size get contentSize => _getContentSize?.call() ?? Size.zero;
-
-  /// Sets the viewport size provider function
-  set viewportSizeGetter(Size? Function()? getter) {
-    _getViewportSize = getter;
+  set viewportSize(Size? size) {
+    _viewportSize = size;
   }
 
-  /// Sets the content size provider function
-  set contentSizeGetter(Size? Function()? getter) {
-    _getContentSize = getter;
+  /// Content size
+  Size? _contentSize;
+
+  Size? get contentSize => _contentSize ?? Size.zero;
+
+  set contentSize(Size? size) {
+    _contentSize = size;
   }
 
   @override

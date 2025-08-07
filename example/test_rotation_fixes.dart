@@ -89,12 +89,7 @@ class _RotationTestPageState extends State<RotationTestPage> {
                   child: const Text('Reset'),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      () => _controller.fitToScreen(
-                        const Size(400, 400),
-                        MediaQuery.of(context).size,
-                        animate: true,
-                      ),
+                  onPressed: () => _controller.fitToScreen(animate: true),
                   child: const Text('Fit to Screen'),
                 ),
               ],

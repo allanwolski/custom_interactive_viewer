@@ -95,15 +95,13 @@ class CustomInteractiveViewerState extends State<CustomInteractiveViewer>
   /// Register viewport and content size getters with the controller
   void _registerControllerSizeGetters() {
     // Register viewport size getter
-    controller.viewportSizeGetter = () {
-      final RenderBox? box =
-          _viewportKey.currentContext?.findRenderObject() as RenderBox?;
-      return box?.size;
-    };
+    final RenderBox? box =
+        _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    controller.viewportSize = box?.size;
 
     // Register content size getter if available
     if (widget.contentSize != null) {
-      controller.contentSizeGetter = () => widget.contentSize;
+      controller.contentSize = widget.contentSize;
     }
   }
 
@@ -155,11 +153,11 @@ class CustomInteractiveViewerState extends State<CustomInteractiveViewer>
   }
 
   /// Center the content if a content size is provided
-  void _centerContentIfNeeded() {
-    if (widget.contentSize != null) {
-      centerContent();
-    }
-  }
+  // void _centerContentIfNeeded() {
+  //   if (widget.contentSize != null) {
+  //     centerContent();
+  //   }
+  // }
 
   @override
   void didUpdateWidget(CustomInteractiveViewer oldWidget) {
@@ -168,9 +166,9 @@ class CustomInteractiveViewerState extends State<CustomInteractiveViewer>
     // Update content size getter if content size changes
     if (oldWidget.contentSize != widget.contentSize) {
       if (widget.contentSize != null) {
-        controller.contentSizeGetter = () => widget.contentSize!;
+        controller.contentSize = widget.contentSize!;
       } else {
-        controller.contentSizeGetter = null;
+        controller.contentSize = null;
       }
     }
 
