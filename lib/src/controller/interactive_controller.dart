@@ -248,9 +248,7 @@ class CustomInteractiveViewerController extends ChangeNotifier {
       _state.contentToScreenPoint(contentPoint);
 
   /// Fit the content to the screen size
-  Future<void> fitToScreen(
-    Size contentSize,
-    Size viewportSize, {
+  Future<void> fitToScreen({
     double padding = 20.0,
     bool animate = true,
     Duration duration = const Duration(milliseconds: 300),
@@ -555,6 +553,10 @@ class CustomInteractiveViewerController extends ChangeNotifier {
 
   /// Function type for getting the content size
   Size? Function()? _getContentSize;
+
+  Size get viewportSize => _getViewportSize?.call() ?? Size.zero;
+
+  Size get contentSize => _getContentSize?.call() ?? Size.zero;
 
   /// Sets the viewport size provider function
   set viewportSizeGetter(Size? Function()? getter) {

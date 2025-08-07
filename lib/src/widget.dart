@@ -88,7 +88,7 @@ class CustomInteractiveViewerState extends State<CustomInteractiveViewer>
     HardwareKeyboard.instance.addHandler(_handleHardwareKeyChange);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _centerContentIfNeeded();
+      // _centerContentIfNeeded();
     });
   }
 
