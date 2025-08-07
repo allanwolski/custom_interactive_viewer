@@ -287,15 +287,7 @@ class GestureHandler {
     final double targetScale =
         (currentScale < doubleTapZoomFactor) ? doubleTapZoomFactor : 1.0;
 
-    // Calculate the zoom factor for the new zoom method
-    final double factor;
-    if (targetScale > currentScale) {
-      // Zoom in: calculate positive factor
-      factor = (targetScale / currentScale) - 1.0;
-    } else {
-      // Zoom out: calculate negative factor
-      factor = -((currentScale / targetScale) - 1.0);
-    }
+    final double factor = calculateZoomFactor(currentScale, targetScale);
 
     await controller.zoom(
       factor: factor,
@@ -305,6 +297,14 @@ class GestureHandler {
 
     _doubleTapPosition = null; // Reset after handling
     _applyConstraints();
+  }
+
+  double calculateZoomFactor(double currentScale, double targetScale) {
+    if (targetScale >= currentScale) {
+      return (targetScale / currentScale) - 1.0;
+    } else {
+      return -((currentScale / targetScale) - 1.0);
+    }
   }
 
   /// Handles pointer scroll events
