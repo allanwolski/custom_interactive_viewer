@@ -92,6 +92,10 @@ class CustomInteractiveViewerState extends State<CustomInteractiveViewer>
       final RenderBox? box =
           _viewportKey.currentContext?.findRenderObject() as RenderBox?;
       controller.viewportSize = box?.size;
+
+      if (widget.contentSize != null && box != null) {
+        controller.constrainToBounds(widget.contentSize!, box.size);
+      }
     });
   }
 
