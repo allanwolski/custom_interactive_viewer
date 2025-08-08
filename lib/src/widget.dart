@@ -89,16 +89,14 @@ class CustomInteractiveViewerState extends State<CustomInteractiveViewer>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // _centerContentIfNeeded();
+      final RenderBox? box =
+          _viewportKey.currentContext?.findRenderObject() as RenderBox?;
+      controller.viewportSize = box?.size;
     });
   }
 
   /// Register viewport and content size getters with the controller
   void _registerControllerSizeGetters() {
-    // Register viewport size getter
-    final RenderBox? box =
-        _viewportKey.currentContext?.findRenderObject() as RenderBox?;
-    controller.viewportSize = box?.size;
-
     // Register content size getter if available
     if (widget.contentSize != null) {
       controller.contentSize = widget.contentSize;
