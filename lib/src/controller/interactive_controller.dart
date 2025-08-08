@@ -431,7 +431,7 @@ class CustomInteractiveViewerController extends ChangeNotifier {
     }
 
     // Get content size from parameter or registered getter
-    final Size? finalContentSize = contentSize ?? contentSize;
+    final Size? finalContentSize = contentSize ?? this.contentSize;
     if (finalContentSize == null) {
       assert(
         false,
