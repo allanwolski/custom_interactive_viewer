@@ -16,12 +16,17 @@ class InteractionConfig {
   /// The scroll mode that determines allowed scroll directions.
   final ScrollMode scrollMode;
 
+  /// The physics to use for the fling animation.
+  /// Defaults to [BouncingScrollPhysics] for an iOS-like effect.
+  final ScrollPhysics physics;
+
   /// Creates an interaction configuration.
   const InteractionConfig({
     this.enableRotation = false,
     this.constrainBounds = false,
     this.enableFling = true,
     this.scrollMode = ScrollMode.both,
+    this.physics = const BouncingScrollPhysics(),
   });
 
   /// Creates a configuration with all interactions disabled.
@@ -29,14 +34,16 @@ class InteractionConfig {
     : enableRotation = false,
       constrainBounds = true,
       enableFling = false,
-      scrollMode = ScrollMode.none;
+      scrollMode = ScrollMode.none,
+      physics = const NeverScrollableScrollPhysics();
 
   /// Creates a configuration optimized for image viewing.
   const InteractionConfig.imageViewer()
     : enableRotation = false,
       constrainBounds = true,
       enableFling = true,
-      scrollMode = ScrollMode.both;
+      scrollMode = ScrollMode.both,
+      physics = const BouncingScrollPhysics();
 
   /// Creates a copy of this configuration with the given fields replaced.
   InteractionConfig copyWith({
@@ -44,12 +51,14 @@ class InteractionConfig {
     bool? constrainBounds,
     bool? enableFling,
     ScrollMode? scrollMode,
+    ScrollPhysics? physics,
   }) {
     return InteractionConfig(
       enableRotation: enableRotation ?? this.enableRotation,
       constrainBounds: constrainBounds ?? this.constrainBounds,
       enableFling: enableFling ?? this.enableFling,
       scrollMode: scrollMode ?? this.scrollMode,
+      physics: physics ?? this.physics,
     );
   }
 
@@ -61,12 +70,14 @@ class InteractionConfig {
           enableRotation == other.enableRotation &&
           constrainBounds == other.constrainBounds &&
           enableFling == other.enableFling &&
-          scrollMode == other.scrollMode;
+          scrollMode == other.scrollMode &&
+          physics == other.physics;
 
   @override
   int get hashCode =>
       enableRotation.hashCode ^
       constrainBounds.hashCode ^
       enableFling.hashCode ^
-      scrollMode.hashCode;
+      scrollMode.hashCode ^
+      physics.hashCode;
 }

@@ -48,6 +48,9 @@ class GestureHandler {
   /// The scroll mode that determines allowed scroll directions
   final ScrollMode scrollMode;
 
+  /// The physics to use for the fling animation.
+  final ScrollPhysics physics;
+
   /// Stores the last focal point during scale gesture
   Offset _lastFocalPoint = Offset.zero;
 
@@ -62,9 +65,6 @@ class GestureHandler {
 
   /// Tracks whether Ctrl key is currently pressed
   bool isCtrlPressed = false;
-
-  /// Simulation for the fling animation
-  Simulation? _flingSimulation;
 
   /// Timer for the fling animation
   Timer? _flingTimer;
@@ -84,6 +84,7 @@ class GestureHandler {
     this.enableFling = true,
     required this.enableZoom,
     this.scrollMode = ScrollMode.both,
+    this.physics = const BouncingScrollPhysics(),
   });
 
   /// Handles the start of a scale gesture
@@ -182,88 +183,133 @@ class GestureHandler {
 
     // Start a fling animation if the velocity is significant
     final double velocityMagnitude = details.velocity.pixelsPerSecond.distance;
-    if (velocityMagnitude >= 200.0) {
-      _startFling(details.velocity);
-    }
+    if (velocityMagnitude.abs() < kMinFlingVelocity) return;
+
+    _startFling(details.velocity);
   }
 
   /// Starts a fling animation with the given velocity
   void _startFling(Velocity velocity) {
     _stopFling(); // Stop any existing fling
 
-    // Calculate appropriate friction based on velocity magnitude
-    // Use higher friction for faster flicks to prevent excessive movement
-    final double velocityMagnitude = velocity.pixelsPerSecond.distance;
-    final double frictionCoefficient = _calculateDynamicFriction(
-      velocityMagnitude,
+    // Create a simulation for the fling animation using the provided physics.
+    // We create two simulations, one for each axis, to handle 2D panning.
+    final Simulation? simX = _createFlingSimulation(
+      position: controller.offset.dx,
+      velocity: velocity.pixelsPerSecond.dx,
+      axis: Axis.horizontal,
+    );
+    final Simulation? simY = _createFlingSimulation(
+      position: controller.offset.dy,
+      velocity: velocity.pixelsPerSecond.dy,
+      axis: Axis.vertical,
     );
 
-    // Create a friction simulation for the fling
-    _flingSimulation = FrictionSimulation(
-      frictionCoefficient, // dynamic friction coefficient
-      0.0, // initial position (we'll use this for time, not position)
-      velocityMagnitude, // velocity magnitude
-    );
-
-    // Get the fling direction as a normalized vector
-    final Offset direction =
-        velocity.pixelsPerSecond.distance > 0
-            ? velocity.pixelsPerSecond / velocity.pixelsPerSecond.distance
-            : Offset.zero;
+    if (simX == null && simY == null) return;
 
     // Start time tracking
     final startTime = DateTime.now().millisecondsSinceEpoch;
 
-    // Create a timer that updates the position 60 times per second
+    // Create a timer that updates the position based on the simulations
     _flingTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
       final now = DateTime.now().millisecondsSinceEpoch;
       final elapsedSeconds = (now - startTime) / 1000.0;
 
-      // Calculate the new position using the physics simulation
-      final double distance = _flingSimulation!.x(elapsedSeconds);
-      final double prevDistance = _flingSimulation!.x(elapsedSeconds - 0.016);
-      final double delta = distance - prevDistance;
+      final double dx = simX?.x(elapsedSeconds) ?? controller.offset.dx;
+      final double dy = simY?.x(elapsedSeconds) ?? controller.offset.dy;
 
-      // Skip tiny movements at the end of the animation
-      if (delta.abs() < 0.1 && _flingSimulation!.isDone(elapsedSeconds)) {
+      final Offset newOffset = Offset(dx, dy);
+
+      // Check if the animation is done
+      final bool isDone =
+          (simX?.isDone(elapsedSeconds) ?? true) &&
+          (simY?.isDone(elapsedSeconds) ?? true);
+
+      // Calculate the delta to check for minimal movement
+      final double delta = (newOffset - controller.offset).distance;
+
+      if (delta < 0.1 && isDone) {
         _stopFling();
+        _applyConstraints(); // Final constraint check
         return;
       }
 
-      // Apply the movement in the direction of the fling
-      final Offset movement = direction * delta;
-      final Offset constrainedMovement = _constrainPanByScrollMode(movement);
-
       // Update the controller position
-      controller.update(newOffset: controller.offset + constrainedMovement);
+      controller.update(newOffset: newOffset);
 
-      _applyConstraints();
+      // For bouncing physics, we don't apply hard constraints during the animation
+      // to allow the bounce effect. We apply it once at the end.
+      if (physics is! BouncingScrollPhysics) {
+        _applyConstraints();
+      }
 
       // Stop the fling when the animation is done
-      if (_flingSimulation!.isDone(elapsedSeconds)) {
+      if (isDone) {
         _stopFling();
+        _applyConstraints(); // Final constraint check
       }
     });
   }
 
-  /// Calculate appropriate friction based on velocity magnitude
-  double _calculateDynamicFriction(double velocityMagnitude) {
-    // Use higher friction for faster flicks
-    // These values can be tuned for the feel you want
-    if (velocityMagnitude > 5000) {
-      return 0.03; // Higher friction for very fast flicks
-    } else if (velocityMagnitude > 3000) {
-      return 0.02; // Medium friction for moderate flicks
-    } else {
-      return 0.01; // Lower friction for gentle movements
+  /// Creates a fling simulation for a single axis.
+  Simulation? _createFlingSimulation({
+    required double position,
+    required double velocity,
+    required Axis axis,
+  }) {
+    final RenderBox? box =
+        viewportKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null ||
+        contentSize == null ||
+        viewportKey.currentContext == null) {
+      return null;
     }
+
+    final devicePixelRatio =
+        View.of(viewportKey.currentContext!).devicePixelRatio;
+    final Size viewportSize = box.size;
+    final Size scaledContentSize = contentSize! * controller.scale;
+
+    // Define scroll metrics for the simulation
+    final ScrollMetrics metrics;
+    if (constrainBounds) {
+      final double minScrollExtent =
+          axis == Axis.horizontal
+              ? math.min(0.0, viewportSize.width - scaledContentSize.width)
+              : math.min(0.0, viewportSize.height - scaledContentSize.height);
+      final double maxScrollExtent = 0.0;
+
+      metrics = FixedScrollMetrics(
+        minScrollExtent: minScrollExtent,
+        maxScrollExtent: maxScrollExtent,
+        pixels: position,
+        viewportDimension:
+            axis == Axis.horizontal ? viewportSize.width : viewportSize.height,
+        axisDirection:
+            axis == Axis.horizontal ? AxisDirection.right : AxisDirection.down,
+        devicePixelRatio: devicePixelRatio,
+      );
+    } else {
+      // If not constraining, allow infinite scrolling
+      metrics = FixedScrollMetrics(
+        minScrollExtent: double.negativeInfinity,
+        maxScrollExtent: double.infinity,
+        pixels: position,
+        viewportDimension:
+            axis == Axis.horizontal ? viewportSize.width : viewportSize.height,
+        axisDirection:
+            axis == Axis.horizontal ? AxisDirection.right : AxisDirection.down,
+        devicePixelRatio: devicePixelRatio,
+      );
+    }
+
+    return physics.createBallisticSimulation(metrics, velocity);
   }
 
   /// Stops any active fling animation
   void _stopFling() {
     _flingTimer?.cancel();
     _flingTimer = null;
-    _flingSimulation = null;
   }
 
   /// Stores double tap position for zoom
