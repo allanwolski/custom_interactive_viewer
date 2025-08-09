@@ -126,7 +126,6 @@ class CustomInteractiveViewerState extends State<CustomInteractiveViewer>
       enableFling: widget.interactionConfig.enableFling,
       enableZoom: widget.zoomConfig.enableZoom,
       scrollMode: widget.interactionConfig.scrollMode,
-      physics: widget.interactionConfig.physics,
     );
     _keyboardHandler = KeyboardHandler(
       controller: controller,
